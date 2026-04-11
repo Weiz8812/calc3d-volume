@@ -13,6 +13,7 @@ DEFAULT_TEMPLATE = r"""
 \usepackage{amsmath, amssymb, mathtools}
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
+\usepackage{graphicx}
 
 \title{<<REPORT_TITLE>>}
 \author{Zikang Wei}
@@ -111,7 +112,7 @@ def _display_math_block(content: str) -> str:
     text = clean_latex((content or '').strip())
     if not text:
         return ''
-    return f'\\[\n{text}\n\\]'
+    return rf'\[\resizebox{{\linewidth}}{{!}}{{$\displaystyle {text}$}}\]'
 
 
 def _line_already_present(target: str, lines: list[str]) -> bool:
