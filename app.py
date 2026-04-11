@@ -20,6 +20,8 @@ from calc3d.symbolic import build_volume_attempt
 from calc3d.utils import to_bound
 
 st.set_page_config(page_title='Calc3D Volume', layout='wide')
+st.title('Calc3D Volume')
+st.caption('Symbolic-first multivariable calculus tool for 3D surfaces and double integrals.')
 
 
 def clean_latex(text: str) -> str:
@@ -62,13 +64,7 @@ def compute_cartesian_volume(pr, X, Y, x_values, y_values, show_lower_branch: bo
 
 def compute_polar_volume(pr, r_min_input, r_max_input, theta_min_input, theta_max_input, grid_points: int, show_lower_branch: bool, volume_mode: str):
     try:
-        X_mid, Y_mid, R_mid, Theta_mid, dr, dtheta = polar_midpoint_mesh(
-            r_min_input,
-            r_max_input,
-            theta_min_input,
-            theta_max_input,
-            grid_points,
-        )
+        X_mid, Y_mid, R_mid, Theta_mid, dr, dtheta = polar_midpoint_mesh(r_min_input, r_max_input, theta_min_input, theta_max_input, grid_points)
         Z_mid = eval_grid(pr.expr, X_mid, Y_mid, allow_partial=True)
         Z_mid = np.nan_to_num(Z_mid, nan=0.0)
         if show_lower_branch and volume_mode == 'Signed integral':
@@ -94,26 +90,14 @@ if 'function_text' not in st.session_state:
 if 'surface_input' not in st.session_state:
     st.session_state.surface_input = st.session_state.function_text
 
-st.title('Calc3D Volume')
-st.caption('Volume-only multivariable calculus tool for 3D surfaces and double integrals.')
-
 with st.sidebar:
     st.header('Inputs')
     st.info('Type your own function first. The sample examples are optional.')
     st.markdown('**Step 1: Enter your own surface**')
-    st.text_input(
-        'Enter surface here',
-        key='surface_input',
-        on_change=apply_typed_surface,
-        help=(
-            'Type your own function here. Examples: z = x^2 + y^2, z^3 = x^2 + y^2, z^2 = x + y + 4, '
-            r'\sin(x)+\cos(y), z+y, z+x, x+y+z=0, x^2+y^2+z^2=1, 1=x^2+y^2+z^2, x^2+y^2-z^2=0'
-        ),
-    )
+    st.text_input('Enter surface here', key='surface_input', on_change=apply_typed_surface, help=('Type your own function here. Examples: z = x^2 + y^2, z^3 = x^2 + y^2, z^2 = x + y + 4, ' + r'\sin(x)+\cos(y), z+y, z+x, x+y+z=0, x^2+y^2+z^2=1, 1=x^2+y^2+z^2, x^2+y^2-z^2=0'))
     if st.button('Use typed surface'):
         apply_typed_surface()
-    st.caption("Type your function above, then press Enter or click 'Use typed surface'.")
-
+    st.caption('Type your function above, then press Enter or click “Use typed surface”.')
     if st.session_state.function_text.strip():
         try:
             preview = parse_surface(st.session_state.function_text)
@@ -123,23 +107,17 @@ with st.sidebar:
                 show_latex(rf'z = {preview.explicit_latex}')
         except Exception:
             st.caption('Input preview unavailable until the expression parses.')
-
     st.markdown('**Optional: load a sample example**')
     sample = st.selectbox('Load sample example', SAMPLES, key='selected_sample', format_func=lambda item: item['label'])
     show_latex(sample['latex'])
     st.button('Use selected sample', on_click=apply_selected_sample)
-
     coordinate_mode = st.radio('Coordinate mode', ['Cartesian rectangle', 'Polar circular region'])
-    st.markdown('**Step 2: Volume options**')
+    st.markdown('**Step 2: Display and calculation options**')
     grid_points = st.slider('Plot grid resolution', min_value=40, max_value=250, value=100, step=10)
-    volume_mode = st.radio(
-        'Volume calculation',
-        ['Signed integral', 'Geometric volume above z = 0'],
-        format_func=lambda mode: 'Net volume (positive and negative parts)' if mode == 'Signed integral' else 'Only the part above z = 0',
-    )
+    volume_mode = st.radio('Volume calculation', ['Signed integral', 'Geometric volume above z = 0'], format_func=lambda mode: 'Net volume (positive and negative parts)' if mode == 'Signed integral' else 'Only the part above z = 0')
+    st.caption('Choose whether to count signed volume or only the part above the xy-plane.')
     show_both_branches = st.checkbox('Show both real branches when available', value=True)
-    show_numeric_approximation = st.checkbox('Show numerical approximation', value=True)
-
+    show_numeric_approximation = st.checkbox('Show numerical approximation', value=True, help='Recommended: leave this on so the final approximate values are always visible.')
     if coordinate_mode == 'Cartesian rectangle':
         st.markdown('**Step 3: Set rectangular bounds**')
         x_min_input = st.number_input('x minimum', value=-2.0, step=1.0)
@@ -152,6 +130,7 @@ with st.sidebar:
         r_max_input = st.number_input('r maximum', value=1.0, step=0.5)
         theta_min_input = st.number_input('theta minimum (radians)', value=0.0, step=0.5)
         theta_max_input = st.number_input('theta maximum (radians)', value=float(2 * np.pi), step=0.5)
+        st.caption('Polar mode is best for disks, annuli, and circular sectors.')
 
 try:
     pr = parse_surface(st.session_state.function_text)
@@ -161,8 +140,9 @@ except Exception as exc:
 
 branch_available = bool(pr.converted_from_power and pr.power is not None and pr.power % 2 == 0 and pr.power_rhs_expr is not None)
 show_lower_branch = branch_available and show_both_branches
-cartesian_report_bounds = None
-polar_report_bounds = None
+report_tex = None
+report_pdf_bytes = None
+report_pdf_message = ''
 
 if coordinate_mode == 'Cartesian rectangle':
     if x_min_input >= x_max_input or y_min_input >= y_max_input:
@@ -172,7 +152,6 @@ if coordinate_mode == 'Cartesian rectangle':
     x_max_exact = to_bound(x_max_input)
     y_min_exact = to_bound(y_min_input)
     y_max_exact = to_bound(y_max_input)
-    cartesian_report_bounds = (x_min_exact, x_max_exact, y_min_exact, y_max_exact)
     x_values = np.linspace(x_min_input, x_max_input, grid_points)
     y_values = np.linspace(y_min_input, y_max_input, grid_points)
     X, Y = np.meshgrid(x_values, y_values)
@@ -202,7 +181,15 @@ if coordinate_mode == 'Cartesian rectangle':
     st.plotly_chart(fig, width='stretch', config={'displaylogo': False, 'scrollZoom': False})
     volume_attempt = build_volume_attempt(pr, x_min_exact, x_max_exact, y_min_exact, y_max_exact, volume_mode)
     volume_attempt = apply_volume_branch_adjustments(volume_attempt, show_lower_branch, volume_mode)
-    volume_value = compute_cartesian_volume(pr, X, Y, x_values, y_values, show_lower_branch, volume_mode)
+    report_volume_value = compute_cartesian_volume(pr, X, Y, x_values, y_values, show_lower_branch, volume_mode)
+    if show_numeric_approximation:
+        st.markdown('### Numerical approximation')
+        st.subheader('Numerical volume')
+        if report_volume_value is not None:
+            st.metric('Approximate value', f'{report_volume_value:.6f}')
+        else:
+            st.warning('Numerical volume was not computed on this region.')
+    report_tex = build_volume_report_tex(pr=pr, coordinate_mode=coordinate_mode, volume_attempt=volume_attempt, volume_numeric=report_volume_value, cartesian_bounds=(x_min_exact, x_max_exact, y_min_exact, y_max_exact))
 else:
     if r_min_input < 0 or r_min_input >= r_max_input or theta_min_input >= theta_max_input:
         st.error('Use polar bounds with 0 <= r minimum < r maximum and theta minimum < theta maximum.')
@@ -211,7 +198,6 @@ else:
     r_max_exact = to_bound(r_max_input)
     theta_min_exact = sp.nsimplify(theta_min_input, [sp.pi])
     theta_max_exact = sp.nsimplify(theta_max_input, [sp.pi])
-    polar_report_bounds = (r_min_exact, r_max_exact, theta_min_exact, theta_max_exact)
     r_values = np.linspace(r_min_input, r_max_input, grid_points)
     theta_values = np.linspace(theta_min_input, theta_max_input, grid_points)
     try:
@@ -241,16 +227,21 @@ else:
     st.plotly_chart(fig, width='stretch', config={'displaylogo': False, 'scrollZoom': False})
     volume_attempt = build_polar_volume_attempt(pr, r_min_exact, r_max_exact, theta_min_exact, theta_max_exact, volume_mode)
     volume_attempt = apply_volume_branch_adjustments(volume_attempt, show_lower_branch, volume_mode)
-    volume_value = compute_polar_volume(pr, r_min_input, r_max_input, theta_min_input, theta_max_input, grid_points, show_lower_branch, volume_mode)
+    report_volume_value = compute_polar_volume(pr, r_min_input, r_max_input, theta_min_input, theta_max_input, grid_points, show_lower_branch, volume_mode)
+    if show_numeric_approximation:
+        st.markdown('### Numerical approximation')
+        st.subheader('Numerical volume')
+        if report_volume_value is not None:
+            st.metric('Approximate value', f'{report_volume_value:.6f}')
+        else:
+            st.warning('Numerical volume was not computed on this polar region.')
+    report_tex = build_volume_report_tex(pr=pr, coordinate_mode=coordinate_mode, volume_attempt=volume_attempt, volume_numeric=report_volume_value, polar_bounds=(r_min_exact, r_max_exact, theta_min_exact, theta_max_exact))
 
-if show_numeric_approximation:
-    st.markdown('### Numerical approximation')
-    if volume_value is not None:
-        st.metric('Approximate volume', f'{volume_value:.6f}')
-    else:
-        st.warning('Numerical volume was not computed on this region.')
+if report_tex is not None:
+    report_pdf_bytes, report_pdf_message = compile_report_pdf(report_tex)
 
 st.markdown('### Calculation details')
+st.subheader('Volume')
 for line in volume_attempt.setup_lines:
     show_latex(line)
 if volume_attempt.success and volume_attempt.final_expr is not None:
@@ -269,25 +260,9 @@ with st.expander('Show volume steps', expanded=False):
     elif volume_attempt.remaining_integral_latex:
         show_latex(volume_attempt.remaining_integral_latex)
 
-st.markdown('### Export report')
-report_tex = build_volume_report_tex(
-    pr,
-    coordinate_mode,
-    volume_attempt,
-    volume_value,
-    cartesian_bounds=cartesian_report_bounds,
-    polar_bounds=polar_report_bounds,
-)
-if st.button('Prepare PDF report'):
-    pdf_bytes, pdf_message = compile_report_pdf(report_tex)
-    st.session_state.volume_pdf_bytes = pdf_bytes
-    st.session_state.volume_pdf_message = pdf_message
-if st.session_state.get('volume_pdf_bytes') is not None:
-    st.download_button('Download volume PDF', st.session_state['volume_pdf_bytes'], file_name='calc3d_volume_report.pdf', mime='application/pdf')
-message = st.session_state.get('volume_pdf_message')
-if message:
-    if st.session_state.get('volume_pdf_bytes') is not None:
-        st.success(message)
-    else:
-        st.warning(message)
-st.download_button('Download volume LaTeX (.tex)', report_tex.encode('utf-8'), file_name='calc3d_volume_report.tex', mime='text/plain')
+if report_pdf_bytes is not None:
+    st.success(report_pdf_message or 'PDF compiled successfully!')
+    st.download_button('Download Overleaf-style PDF report', data=report_pdf_bytes, file_name='calc3d_report.pdf', mime='application/pdf', on_click='ignore')
+elif report_tex is not None:
+    st.warning(report_pdf_message or 'Could not compile the Overleaf-style PDF report. Download the .tex file instead.')
+    st.download_button('Download Overleaf .tex report', data=report_tex, file_name='calc3d_report.tex', mime='text/x-tex', on_click='ignore')
