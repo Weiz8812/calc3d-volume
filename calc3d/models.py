@@ -9,8 +9,8 @@ class ParseResult:
     explicit_latex: str
     fx_expr: sp.Expr
     fy_expr: sp.Expr
-    note: str = ""
-    domain_note: str = ""
+    note: str = ''
+    domain_note: str = ''
     converted_from_power: bool = False
     power: Optional[int] = None
     power_rhs_expr: Optional[sp.Expr] = None
@@ -22,5 +22,5 @@ class ExactAttempt:
     step_lines: list[str] = field(default_factory=list)
     final_expr: Optional[sp.Expr] = None
     success: bool = False
-    failure_reason: str = ""
-    remaining_integral_latex: str = ""
+    failure_reason: str = ''
+    remaining_integral_latex: str = ''
