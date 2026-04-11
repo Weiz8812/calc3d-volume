@@ -13,7 +13,6 @@ DEFAULT_TEMPLATE = r"""
 \usepackage{amsmath, amssymb, mathtools}
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
-\usepackage{graphicx}
 
 \title{<<REPORT_TITLE>>}
 \author{Zikang Wei}
@@ -49,6 +48,13 @@ DEFAULT_TEMPLATE = r"""
 """.strip()
 
 
+def _load_template() -> str:
+    template_path = Path(__file__).resolve().parent.parent / 'docs' / 'volume_report_template.tex'
+    if template_path.exists():
+        return template_path.read_text(encoding='utf-8')
+    return DEFAULT_TEMPLATE
+
+
 def clean_latex(text: str) -> str:
     return (text or '').replace('\\\\', '\\')
 
@@ -67,6 +73,15 @@ def _latex_escape_text(text: str) -> str:
     for old, new in replacements.items():
         text = text.replace(old, new)
     return text
+
+
+def _clean_reason(reason: str) -> str:
+    text = (reason or 'the symbolic evaluation does not simplify cleanly').strip()
+    text = text.replace('Use the numerical approximation for a decimal value.', '').strip()
+    text = text.rstrip('.')
+    if text.lower().startswith('the '):
+        text = text[4:]
+    return text[:1].lower() + text[1:] if text else 'the symbolic evaluation does not simplify cleanly'
 
 
 def _format_decimal(value: float | None) -> str:
@@ -112,7 +127,7 @@ def _display_math_block(content: str) -> str:
     text = clean_latex((content or '').strip())
     if not text:
         return ''
-    return rf'\[\resizebox{{\linewidth}}{{!}}{{$\displaystyle {text}$}}\]'
+    return f'\\[\n{text}\n\\]'
 
 
 def _line_already_present(target: str, lines: list[str]) -> bool:
@@ -138,10 +153,14 @@ def _build_steps_block(symbol: str, attempt: ExactAttempt, numeric_value: float 
     else:
         if attempt.remaining_integral_latex and not _line_already_present(attempt.remaining_integral_latex, attempt.step_lines):
             blocks.append(_display_math_block(attempt.remaining_integral_latex))
-        reason = _latex_escape_text((attempt.failure_reason or 'A numerical approximation is used for the final value.').strip())
-        blocks.append(_display_math_block(rf'\text{{{reason}}}'))
-        blocks.append(_display_math_block(rf'{symbol} \approx {_format_decimal(final_decimal)}'))
-    return '\n\n'.join(block for block in blocks if block)
+        reason = _latex_escape_text(_clean_reason(attempt.failure_reason))
+        fallback_text = (
+            f'The exact setup above is valid. However, {reason}. '
+            f'A numerical approximation is used for the final value.\n\n'
+            f'{_display_math_block(rf"{symbol} \\approx {_format_decimal(final_decimal)}")}'
+        )
+        blocks.append(fallback_text)
+    return '\n\n'.join(block for block in blocks if block) or 'No symbolic steps were recorded.'
 
 
 def build_volume_report_tex(
@@ -152,6 +171,7 @@ def build_volume_report_tex(
     cartesian_bounds: tuple[sp.Expr, sp.Expr, sp.Expr, sp.Expr] | None = None,
     polar_bounds: tuple[sp.Expr, sp.Expr, sp.Expr, sp.Expr] | None = None,
 ) -> str:
+    template = _load_template()
     if coordinate_mode == 'Cartesian rectangle':
         if cartesian_bounds is None:
             raise ValueError('Cartesian bounds are required for the Cartesian report template.')
@@ -162,7 +182,6 @@ def build_volume_report_tex(
         region_latex = _build_polar_region(polar_bounds)
 
     final_decimal = _attempt_final_decimal(volume_attempt, volume_numeric)
-    template = DEFAULT_TEMPLATE
     replacements = {
         '<<REPORT_TITLE>>': 'Calc3D Volume Report',
         '<<SURFACE_LATEX>>': _surface_latex(pr),
@@ -180,7 +199,6 @@ def compile_report_pdf(tex_source: str) -> tuple[bytes | None, str]:
     engine = shutil.which('pdflatex') or shutil.which('xelatex') or shutil.which('lualatex')
     if engine is None:
         return None, 'No LaTeX engine was found in the app environment.'
-
     engine_name = Path(engine).name
     with tempfile.TemporaryDirectory() as tmpdir:
         workdir = Path(tmpdir)
