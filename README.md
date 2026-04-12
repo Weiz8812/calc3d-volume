@@ -32,3 +32,7 @@ Install the dependencies:
 
 ```bash
 pip install -r requirements.txt
+```
+Then Launch the App
+```bash
+streamlit run app.py
