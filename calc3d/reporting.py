@@ -131,14 +131,15 @@ def _display_math_block(content: str) -> str:
     if len(text) > 70:
         return (
             '\\[\n'
-            '\\resizebox{\\textwidth}{!}{$\\displaystyle\n'
+            '\\small\n'
+            '\\begin{aligned}\n'
             f'{text}\n'
-            '$}\n'
-            '\\]'
+            '\\end{aligned}\n'
+            '\\]\n'
+            '\\normalsize'
         )
 
-    return f'\\\\[\n{text}\n\\\\]'
-
+    return f'\\[\n{text}\n\\]'
 
 def _line_already_present(target: str, lines: list[str]) -> bool:
     target_clean = clean_latex((target or '').strip())
