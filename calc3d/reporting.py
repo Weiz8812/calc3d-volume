@@ -11,6 +11,7 @@ DEFAULT_TEMPLATE = r"""
 \documentclass[11pt]{article}
 \usepackage[margin=1in]{geometry}
 \usepackage{amsmath, amssymb, mathtools}
+\usepackage{graphicx}
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
 
@@ -32,9 +33,7 @@ DEFAULT_TEMPLATE = r"""
 \]
 
 \section*{3. Exact Setup}
-\[
-<<SETUP_LATEX>>
-\]
+<<SETUP_BLOCK>>
 
 \section*{4. Symbolic Steps}
 <<STEPS_BLOCK>>
@@ -127,7 +126,18 @@ def _display_math_block(content: str) -> str:
     text = clean_latex((content or '').strip())
     if not text:
         return ''
-    return f'\\[\n{text}\n\\]'
+
+    # Prevent long Cartesian setup/symbolic lines from running off the PDF page.
+    if len(text) > 70:
+        return (
+            '\\[\n'
+            '\\resizebox{\\textwidth}{!}{$\\displaystyle\n'
+            f'{text}\n'
+            '$}\n'
+            '\\]'
+        )
+
+    return f'\\\\[\n{text}\n\\\\]'
 
 
 def _line_already_present(target: str, lines: list[str]) -> bool:
@@ -186,7 +196,7 @@ def build_volume_report_tex(
         '<<REPORT_TITLE>>': 'Calc3D Volume Report',
         '<<SURFACE_LATEX>>': _surface_latex(pr),
         '<<REGION_LATEX>>': region_latex,
-        '<<SETUP_LATEX>>': _extract_setup_latex(volume_attempt, 'V = 0'),
+        '<<SETUP_BLOCK>>': _display_math_block(_extract_setup_latex(volume_attempt, 'V = 0')),
         '<<STEPS_BLOCK>>': _build_steps_block('V', volume_attempt, volume_numeric),
         '<<FINAL_DECIMAL>>': _format_decimal(final_decimal),
     }
