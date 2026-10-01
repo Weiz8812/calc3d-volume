@@ -4,7 +4,7 @@ Calc3D Volume is an interactive Streamlit application for visualizing 3D surface
 
 ## Project Background
 
-Calc3D Volume is a focused continuation of **Calc3D Visualizer**, an earlier experimental project developed through the STEM Honors program at Wor-Wic Community College and presented at a student research summit. The original project explored a wider set of multivariable-calculus features; Calc3D Volume narrows that work into a more focused tool for volume visualization and evaluation.
+Calc3D Volume is a focused continuation of **Calc3D Visualizer**, an earlier experimental project developed through the STEM Honors program at Wor-Wic Community College and presented at the 2026 Maryland Scholars Summit. The original project explored a wider set of multivariable-calculus features; Calc3D Volume narrows that work into a more focused tool for volume visualization and evaluation.
 
 ## Features
 
