@@ -2,6 +2,10 @@
 
 Calc3D Volume is an interactive Streamlit application for visualizing 3D surfaces and evaluating volume in multivariable calculus. It combines graphing, symbolic setup, numerical approximation, and report generation in one workflow.
 
+## Application Preview
+
+![Calc3D Volume interactive 3D surface visualization](assets/calc3d-volume-overview.png)
+
 ## Project Background
 
 Calc3D Volume is a focused continuation of **Calc3D Visualizer**, an earlier experimental project developed through the STEM Honors program at Wor-Wic Community College and presented at the 2026 Maryland Scholars Summit. The original project explored a wider set of multivariable-calculus features; Calc3D Volume narrows that work into a more focused tool for volume visualization and evaluation.
@@ -17,6 +21,12 @@ Calc3D Volume is a focused continuation of **Calc3D Visualizer**, an earlier exp
 - Compute numerical volume approximations when an exact symbolic result is impractical
 - Choose between signed volume and geometric volume above `z = 0`
 - Export the calculation workflow as a LaTeX-based PDF report
+
+## Calculation Output
+
+The app presents numerical approximations alongside symbolic integral setup and exact results when available.
+
+![Calc3D Volume numerical and symbolic calculation output](assets/calc3d-volume-results.png)
 
 ## Example Inputs
 
