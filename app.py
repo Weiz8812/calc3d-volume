@@ -262,7 +262,7 @@ with st.expander('Show volume steps', expanded=False):
 
 if report_pdf_bytes is not None:
     st.success(report_pdf_message or 'PDF compiled successfully!')
-    st.download_button('Download Overleaf-style PDF report', data=report_pdf_bytes, file_name='calc3d_report.pdf', mime='application/pdf', on_click='ignore')
+    st.download_button('Download PDF report', data=report_pdf_bytes, file_name='calc3d_report.pdf', mime='application/pdf', on_click='ignore')
 elif report_tex is not None:
     st.warning(report_pdf_message or 'Could not compile the Overleaf-style PDF report. Download the .tex file instead.')
-    st.download_button('Download Overleaf .tex report', data=report_tex, file_name='calc3d_report.tex', mime='text/x-tex', on_click='ignore')
+    st.download_button('Download LaTeX report', data=report_tex, file_name='calc3d_report.tex', mime='text/x-tex', on_click='ignore')
